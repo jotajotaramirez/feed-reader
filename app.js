@@ -54,8 +54,7 @@ function loadEntry(index) {
         iframe.src = entry.link;
     }
     
-    // Al entrar a la url, se marca como leida automaticamente
-    markCurrentAsRead();
+    
     updateUI();
 }
 
@@ -155,8 +154,14 @@ async function init() {
 }
 
 // Event Listeners
-btnPrev.addEventListener('click', () => loadEntry(currentIndex - 1));
-btnNext.addEventListener('click', () => loadEntry(currentIndex + 1));
+btnPrev.addEventListener('click', () => {
+    markCurrentAsRead();
+    loadEntry(currentIndex - 1);
+});
+btnNext.addEventListener('click', () => {
+    markCurrentAsRead();
+    loadEntry(currentIndex + 1);
+});
 btnUnread.addEventListener('click', toggleCurrentUnreadStatus);
 
 init();

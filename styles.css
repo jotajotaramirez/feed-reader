@@ -1,0 +1,134 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+:root {
+    --bar-height: 64px;
+    --bg-dark: #0f172a;
+    --bar-bg: rgba(15, 23, 42, 0.85);
+    --text-color: #f8fafc;
+    --text-muted: #94a3b8;
+    --accent: #38bdf8;
+    --accent-red: #ef4444;
+    --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+body {
+    background-color: var(--bg-dark);
+    color: var(--text-color);
+    font-family: var(--font);
+    overflow: hidden; /* Evita que la página misma se desplace */
+    height: 100dvh;   /* 100dvh para adaptarse a las barras de Android Brave */
+    display: flex;
+    flex-direction: column;
+}
+
+#loader {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100dvh;
+    background: var(--bg-dark);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    transition: opacity 0.3s ease;
+}
+
+#loader.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid rgba(255, 255, 255, 0.1);
+    border-top: 4px solid var(--accent);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+#welele-frame {
+    flex-grow: 1;
+    width: 100%;
+    border: none;
+    background-color: #ffffff;
+}
+
+/* Bottom Bar */
+#bottom-bar {
+    height: var(--bar-height);
+    background-color: var(--bar-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    box-shadow: 0 -4px 15px rgba(0,0,0,0.5);
+    z-index: 100;
+}
+
+.nav-btn, .action-btn {
+    background: none;
+    border: none;
+    color: var(--text-color);
+    height: 48px;
+    width: 48px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.nav-btn:active, .action-btn:active {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.nav-btn:disabled {
+    color: rgba(255,255,255,0.2);
+    cursor: not-allowed;
+}
+
+.nav-btn svg, .action-btn svg {
+    width: 28px;
+    height: 28px;
+}
+
+#center-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+}
+
+#unread-count {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-color);
+    line-height: 1;
+    margin-bottom: 2px;
+}
+
+.small-text {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Cuando el artículo actual está marcado como NO leído, el color cambia */
+.action-btn.unread-active {
+    color: var(--accent-red);
+}

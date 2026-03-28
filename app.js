@@ -5,7 +5,7 @@ const unreadCountSpan = document.getElementById('unread-count');
 const iframe = document.getElementById('welele-frame');
 const loader = document.getElementById('loader');
 
-const RSS_URL = 'https://welele.es/rss';
+const ARCHIVE_URL = 'welele_archive.json';
 let feedEntries = [];
 let currentIndex = -1;
 
@@ -78,12 +78,21 @@ function updateUI() {
     const currentUrl = feedEntries[currentIndex].link;
     const readEntries = getReadEntries();
     
+    const unreadIcon = document.getElementById('unread-icon');
+    const unreadText = document.getElementById('unread-text');
+    
     // Si la entrada actual NO está en readEntries, significa que el usuario la marcó explícitamente como "no leída" 
     // porque `loadEntry` lo habría marcado. Cambiamos el icono o color.
     if (!readEntries.includes(currentUrl)) {
         btnUnread.classList.add('unread-active');
+        btnUnread.title = "Marcar como visto";
+        if (unreadText) unreadText.textContent = "No visto";
+        if (unreadIcon) unreadIcon.innerHTML = `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle><line x1="3" y1="3" x2="21" y2="21"></line>`;
     } else {
         btnUnread.classList.remove('unread-active');
+        btnUnread.title = "Marcar como no visto";
+        if (unreadText) unreadText.textContent = "Visto";
+        if (unreadIcon) unreadIcon.innerHTML = `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>`;
     }
     
     // Calcular pendientes en base a TODO EL FEED de esta sesión comparado con localStorage
@@ -93,23 +102,13 @@ function updateUI() {
 
 async function init() {
     try {
-        // Usamos AllOrigins como proxy CORS, tal y como acordamos si fallaba directamente.
-        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(RSS_URL)}`;
-        const response = await fetch(proxyUrl);
-        if (!response.ok) throw new Error("HTTP error " + response.status);
+        // En lugar de llamar al RSS en vivo (que pierde el historial), ahora leemos 
+        // nuestro gran archivo histórico local actualizado automáticamente por GitHub Actions.
+        const response = await fetch(ARCHIVE_URL);
+        if (!response.ok) throw new Error("Error al leer el historial " + response.status);
         
         const data = await response.json();
-        const text = data.contents;
-        
-        const parser = new DOMParser();
-        const xmlDoc = parser.parseFromString(text, 'text/xml');
-        
-        const items = Array.from(xmlDoc.querySelectorAll('item'));
-        
-        const allEntries = items.map(item => ({
-            title: item.querySelector('title')?.textContent || '',
-            link: item.querySelector('link')?.textContent || ''
-        }));
+        const allEntries = data.items || [];
         
         const readEntries = getReadEntries();
         // Filtrar SOLO las que no habian sido leidas antes de INICIAR la sesión
@@ -123,7 +122,7 @@ async function init() {
         } else {
             // No hay nada nuevo
             iframe.srcdoc = `
-                <html style="background:#0f172a; color:#f8fafc; display:flex; justify-content:center; align-items:center; height:100vh; font-family:sans-serif;">
+                <html style="background:#000000; color:#f8fafc; display:flex; justify-content:center; align-items:center; height:100vh; font-family:sans-serif;">
                     <body>
                         <div style="text-align:center;">
                             <h2 style="margin-bottom:10px;">¡Todo al día! 🎉</h2>
@@ -140,7 +139,7 @@ async function init() {
         
         // Un mensaje de error elegante
         iframe.srcdoc = `
-            <html style="background:#0f172a; color:#f8fafc; display:flex; justify-content:center; align-items:center; height:100vh; font-family:sans-serif;">
+            <html style="background:#000000; color:#f8fafc; display:flex; justify-content:center; align-items:center; height:100vh; font-family:sans-serif;">
                 <body>
                     <div style="text-align:center; max-width: 80%; padding: 20px; border: 1px solid #334155; border-radius: 12px;">
                         <svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 48px; height: 48px; margin-bottom:15px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>

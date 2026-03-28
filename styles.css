@@ -6,8 +6,8 @@
 
 :root {
     --bar-height: 64px;
-    --bg-dark: #0f172a;
-    --bar-bg: rgba(15, 23, 42, 0.85);
+    --bg-dark: #000000;
+    --bar-bg: rgba(0, 0, 0, 0.85);
     --text-color: #f8fafc;
     --text-muted: #94a3b8;
     --accent: #38bdf8;
@@ -76,32 +76,68 @@ body {
     z-index: 100;
 }
 
-.nav-btn, .action-btn {
-    background: none;
-    border: none;
+.nav-btn {
+    background-color: #1a1a1a;
+    border: 1px solid #333;
     color: var(--text-color);
     height: 48px;
     width: 48px;
     display: flex;
     justify-content: center;
     align-items: center;
-    border-radius: 50%;
+    border-radius: 12px;
     cursor: pointer;
-    transition: background-color 0.2s, color 0.2s;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
 }
 
-.nav-btn:active, .action-btn:active {
+.action-btn {
+    background-color: #1a1a1a;
+    border: 1px solid #333;
+    color: var(--text-color);
+    height: 48px;
+    width: auto;
+    padding: 0 16px;
+    gap: 8px;
+    font-family: var(--font);
+    font-size: 14px;
+    font-weight: 600;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+}
+
+.nav-btn:hover:not(:disabled), .action-btn:hover:not(:disabled) {
+    background-color: #2a2a2a;
+    border-color: #444;
+    transform: translateY(-2px);
+}
+
+.nav-btn:active:not(:disabled), .action-btn:active:not(:disabled) {
     background-color: rgba(255, 255, 255, 0.1);
+    transform: translateY(0);
 }
 
-.nav-btn:disabled {
+.nav-btn:disabled, .action-btn:disabled {
+    background-color: #0d0d0d;
+    border-color: #1a1a1a;
     color: rgba(255,255,255,0.2);
+    box-shadow: none;
     cursor: not-allowed;
 }
 
-.nav-btn svg, .action-btn svg {
-    width: 28px;
-    height: 28px;
+.nav-btn svg {
+    width: 24px;
+    height: 24px;
+}
+
+.action-btn svg {
+    width: 20px;
+    height: 20px;
 }
 
 #center-info {

@@ -5,6 +5,32 @@ const unreadCountSpan = document.getElementById('unread-count');
 const iframe = document.getElementById('welele-frame');
 const loader = document.getElementById('loader');
 
+const startPhrases = [
+    "Tu dosis diaria de humor y entretenimiento.",
+    "Vamos a partirnos el ojete.",
+    "Estamos aquí por los loles.",
+    "Se viene el descojone padre.",
+    "Vamos a echarnos unas risas de las de mearse encima.",
+    "Aquí hemos venido a hacer el cafre y poco más.",
+    "Menuda mofada va a ser esto, ya verás.",
+    "A ver quién suelta la mayor parida por minuto.",
+    "Se va a liar una buena solo por los loles.",
+    "Qué cebada de plan, nos vamos a partir el eje.",
+    "Panzada de reír asegurada, chavales.",
+    "Esto es canela en rama para el cachondeo.",
+    "Vamos a deshuevarnos vivo con la tontería.",
+    "Vaya mofeta de situación, es que me meo.",
+    "Aquí solo se viene a disfrutar del pitorreo máximo.",
+    "Prepárate, que nos vamos a partir la caja a lo bestia.",
+    "Qué desfase de risas nos espera hoy.",
+    "Vamos a dar el cante pero bien, solo por el meme.",
+    "Menudo pitorreo de los buenos tenemos montado.",
+    "Se avecina el festival del descojone total.",
+    "Vamos a hacer el canelo nivel Dios.",
+    "Esto va a ser un despelote absoluto, ya te digo.",
+    "Se viene la risión máxima, eso ni se pregunta."
+];
+
 const ARCHIVE_URL = 'welele_archive.json';
 let feedEntries = [];
 let currentIndex = -1;
@@ -120,6 +146,11 @@ async function init() {
         if (feedEntries.length > 0) {
             const startScreen = document.getElementById('start-screen');
             const btnStart = document.getElementById('btn-start');
+            const subtitle = document.getElementById('start-subtitle');
+            
+            // Set random phrase
+            subtitle.textContent = startPhrases[Math.floor(Math.random() * startPhrases.length)];
+            
             startScreen.classList.add('active');
             
             btnStart.addEventListener('click', () => {

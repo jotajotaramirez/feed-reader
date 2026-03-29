@@ -54,7 +54,8 @@ function loadEntry(index) {
         iframe.src = entry.link;
     }
     
-    
+    // Marcar automáticamente como visto nada más cargar
+    markCurrentAsRead();
     updateUI();
 }
 
@@ -117,7 +118,14 @@ async function init() {
         loader.classList.add('hidden');
         
         if (feedEntries.length > 0) {
-            loadEntry(0);
+            const startScreen = document.getElementById('start-screen');
+            const btnStart = document.getElementById('btn-start');
+            startScreen.classList.add('active');
+            
+            btnStart.addEventListener('click', () => {
+                startScreen.classList.remove('active');
+                loadEntry(0);
+            });
         } else {
             // No hay nada nuevo
             iframe.srcdoc = `
@@ -155,11 +163,9 @@ async function init() {
 
 // Event Listeners
 btnPrev.addEventListener('click', () => {
-    markCurrentAsRead();
     loadEntry(currentIndex - 1);
 });
 btnNext.addEventListener('click', () => {
-    markCurrentAsRead();
     loadEntry(currentIndex + 1);
 });
 btnUnread.addEventListener('click', toggleCurrentUnreadStatus);

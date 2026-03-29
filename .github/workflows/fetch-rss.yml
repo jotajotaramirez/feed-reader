@@ -9,6 +9,8 @@ on:
 jobs:
   fetch-rss:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     
     steps:
       - name: Checkout repositorio

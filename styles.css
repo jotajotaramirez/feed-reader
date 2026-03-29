@@ -124,6 +124,23 @@ body {
     line-height: 1.5;
 }
 
+.start-info {
+    color: #38bdf8;
+    font-size: 1rem;
+    font-weight: 500;
+    margin-top: 5px;
+    background: rgba(56, 189, 248, 0.1);
+    padding: 8px 20px;
+    border-radius: 99px;
+    border: 1px solid rgba(56, 189, 248, 0.2);
+    display: inline-block;
+}
+
+.start-info strong {
+    font-weight: 800;
+    font-size: 1.1rem;
+}
+
 .start-btn {
     background: linear-gradient(to right, #10b981, #0ea5e9);
     color: white;

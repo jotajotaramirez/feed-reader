@@ -151,6 +151,13 @@ async function init() {
             // Set random phrase
             subtitle.textContent = startPhrases[Math.floor(Math.random() * startPhrases.length)];
             
+            const startUnreadInfo = document.getElementById('start-unread-info');
+            const startUnreadCount = document.getElementById('start-unread-count');
+            if (startUnreadInfo && startUnreadCount) {
+                startUnreadCount.textContent = feedEntries.length;
+                startUnreadInfo.style.display = 'block';
+            }
+            
             startScreen.classList.add('active');
             
             btnStart.addEventListener('click', () => {

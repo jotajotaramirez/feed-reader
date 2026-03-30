@@ -271,3 +271,28 @@ body {
 .action-btn.unread-active {
     color: var(--accent-red);
 }
+
+.nav-buttons-group {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+}
+
+.export-btn {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid #334155;
+    padding: 10px 20px;
+    font-size: 0.9rem;
+    font-family: var(--font);
+    border-radius: 99px;
+    cursor: pointer;
+    margin-top: 24px;
+    transition: all 0.3s ease;
+}
+
+.export-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-color);
+    border-color: #475569;
+}

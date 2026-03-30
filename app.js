@@ -208,4 +208,22 @@ btnNext.addEventListener('click', () => {
 });
 btnUnread.addEventListener('click', toggleCurrentUnreadStatus);
 
+const btnExport = document.getElementById('btn-export');
+if (btnExport) {
+    btnExport.addEventListener('click', () => {
+        const readEntries = getReadEntries();
+        if(readEntries.length === 0) {
+            alert("No hay entradas leídas para exportar.");
+            return;
+        }
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(readEntries, null, 2));
+        const downloadAnchorNode = document.createElement('a');
+        downloadAnchorNode.setAttribute("href", dataStr);
+        downloadAnchorNode.setAttribute("download", "welele_vistos_backup.json");
+        document.body.appendChild(downloadAnchorNode);
+        downloadAnchorNode.click();
+        downloadAnchorNode.remove();
+    });
+}
+
 init();

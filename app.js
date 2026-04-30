@@ -110,19 +110,16 @@ function updateUI() {
     const readEntries = getReadEntries();
 
     const unreadIcon = document.getElementById('unread-icon');
-    const unreadText = document.getElementById('unread-text');
 
     // Si la entrada actual NO está en readEntries, significa que el usuario la marcó explícitamente como "no leída" 
     // porque `loadEntry` lo habría marcado. Cambiamos el icono o color.
     if (!readEntries.includes(currentUrl)) {
         btnUnread.classList.add('unread-active');
         btnUnread.title = "Marcar como visto";
-        if (unreadText) unreadText.textContent = "No visto";
         if (unreadIcon) unreadIcon.innerHTML = `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle><line x1="3" y1="3" x2="21" y2="21"></line>`;
     } else {
         btnUnread.classList.remove('unread-active');
         btnUnread.title = "Marcar como no visto";
-        if (unreadText) unreadText.textContent = "Visto";
         if (unreadIcon) unreadIcon.innerHTML = `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>`;
     }
 

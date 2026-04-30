@@ -165,6 +165,16 @@ body {
     transform: translateY(1px);
 }
 
+.start-btn.secondary {
+    background: linear-gradient(to right, #8b5cf6, #ec4899);
+    margin-top: 10px;
+    box-shadow: 0 4px 20px rgba(236, 72, 153, 0.4);
+}
+
+.start-btn.secondary:hover {
+    box-shadow: 0 8px 25px rgba(236, 72, 153, 0.6);
+}
+
 /* Bottom Bar */
 #bottom-bar {
     height: var(--bar-height);
@@ -213,6 +223,17 @@ body {
     cursor: pointer;
     transition: all 0.2s ease;
     box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+}
+
+.left-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.action-btn.icon-only {
+    padding: 0;
+    width: 48px;
 }
 
 .nav-btn:hover:not(:disabled), .action-btn:hover:not(:disabled) {
@@ -270,6 +291,13 @@ body {
 /* Cuando el artículo actual está marcado como NO leído, el color cambia */
 .action-btn.unread-active {
     color: var(--accent-red);
+}
+
+.action-btn.favorite-active {
+    color: #ef4444; /* Red color para el corazón */
+}
+.action-btn.favorite-active svg {
+    fill: currentColor;
 }
 
 .nav-buttons-group {

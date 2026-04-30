@@ -9,31 +9,13 @@ const startPhrases = [
     "Tu dosis diaria de humor y entretenimiento.",
     "Vamos a partirnos el ojete.",
     "Estamos aquí por los loles.",
-    "Se viene el descojone padre.",
-    "Vamos a echarnos unas risas de las de mearse encima.",
-    "Aquí hemos venido a hacer el cafre y poco más.",
-    "Menuda mofada va a ser esto, ya verás.",
-    "A ver quién suelta la mayor parida por minuto.",
-    "Se va a liar una buena solo por los loles.",
-    "Qué cebada de plan, nos vamos a partir el eje.",
-    "Panzada de reír asegurada, chavales.",
-    "Esto es canela en rama para el cachondeo.",
-    "Vamos a deshuevarnos vivo con la tontería.",
-    "Vaya mofeta de situación, es que me meo.",
-    "Aquí solo se viene a disfrutar del pitorreo máximo.",
-    "Prepárate, que nos vamos a partir la caja a lo bestia.",
-    "Qué desfase de risas nos espera hoy.",
-    "Vamos a dar el cante pero bien, solo por el meme.",
-    "Menudo pitorreo de los buenos tenemos montado.",
-    "Se avecina el festival del descojone total.",
-    "Vamos a hacer el canelo nivel Dios.",
-    "Esto va a ser un despelote absoluto, ya te digo.",
-    "Se viene la risión máxima, eso ni se pregunta."
 ];
 
 const ARCHIVE_URL = 'welele_archive.json';
+let allEntries = [];
 let feedEntries = [];
 let currentIndex = -1;
+let viewMode = 'feed';
 
 function getReadEntries() {
     const data = localStorage.getItem('welele_read');
@@ -43,6 +25,29 @@ function getReadEntries() {
 function setReadEntries(entries) {
     localStorage.setItem('welele_read', JSON.stringify(entries));
     updateUI();
+}
+
+function getFavorites() {
+    const data = localStorage.getItem('welele_favorites');
+    return data ? JSON.parse(data) : [];
+}
+
+function setFavorites(entries) {
+    localStorage.setItem('welele_favorites', JSON.stringify(entries));
+    updateUI();
+}
+
+function toggleFavorite() {
+    if (currentIndex < 0 || currentIndex >= feedEntries.length) return;
+    const url = feedEntries[currentIndex].link;
+    let favorites = getFavorites();
+
+    if (favorites.includes(url)) {
+        favorites = favorites.filter(u => u !== url);
+    } else {
+        favorites.push(url);
+    }
+    setFavorites(favorites);
 }
 
 function markCurrentAsRead() {
@@ -59,7 +64,7 @@ function toggleCurrentUnreadStatus() {
     if (currentIndex < 0 || currentIndex >= feedEntries.length) return;
     const url = feedEntries[currentIndex].link;
     let readEntries = getReadEntries();
-    
+
     if (readEntries.includes(url)) {
         // Estaba leído, marcar como no leído eliminándolo de local storage
         readEntries = readEntries.filter(u => u !== url);
@@ -73,13 +78,13 @@ function toggleCurrentUnreadStatus() {
 function loadEntry(index) {
     if (index < 0 || index >= feedEntries.length) return;
     currentIndex = index;
-    
+
     const entry = feedEntries[currentIndex];
     // Evitar recargar si ya es el mismo
     if (iframe.src !== entry.link) {
         iframe.src = entry.link;
     }
-    
+
     // Marcar automáticamente como visto nada más cargar
     markCurrentAsRead();
     updateUI();
@@ -93,20 +98,20 @@ function updateUI() {
         btnUnread.disabled = true;
         return;
     }
-    
+
     // El orden de las entradas es 0 = la más nueva.
     // Navegar "Anterior" (Previous) va a las entradas más nuevas (índice menor).
     // Navegar "Siguiente" (Next) va a las entradas más viejas (índice mayor).
     btnPrev.disabled = currentIndex <= 0;
     btnNext.disabled = currentIndex >= feedEntries.length - 1;
     btnUnread.disabled = false;
-    
+
     const currentUrl = feedEntries[currentIndex].link;
     const readEntries = getReadEntries();
-    
+
     const unreadIcon = document.getElementById('unread-icon');
     const unreadText = document.getElementById('unread-text');
-    
+
     // Si la entrada actual NO está en readEntries, significa que el usuario la marcó explícitamente como "no leída" 
     // porque `loadEntry` lo habría marcado. Cambiamos el icono o color.
     if (!readEntries.includes(currentUrl)) {
@@ -120,10 +125,30 @@ function updateUI() {
         if (unreadText) unreadText.textContent = "Visto";
         if (unreadIcon) unreadIcon.innerHTML = `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>`;
     }
-    
+
     // Calcular pendientes en base a TODO EL FEED de esta sesión comparado con localStorage
-    const pendingCount = feedEntries.filter(entry => !readEntries.includes(entry.link)).length;
-    unreadCountSpan.textContent = pendingCount;
+    const smallText = document.querySelector('#center-info .small-text');
+    const favorites = getFavorites();
+    const btnFavorite = document.getElementById('btn-favorite');
+
+    if (btnFavorite) {
+        if (favorites.includes(currentUrl)) {
+            btnFavorite.classList.add('favorite-active');
+            btnFavorite.title = "Quitar de favoritos";
+        } else {
+            btnFavorite.classList.remove('favorite-active');
+            btnFavorite.title = "Añadir a favoritos";
+        }
+    }
+
+    if (viewMode === 'favorites') {
+        unreadCountSpan.textContent = feedEntries.length;
+        if (smallText) smallText.textContent = "favoritos";
+    } else {
+        const pendingCount = feedEntries.filter(entry => !readEntries.includes(entry.link)).length;
+        unreadCountSpan.textContent = pendingCount;
+        if (smallText) smallText.textContent = "pendientes";
+    }
 }
 
 async function init() {
@@ -132,37 +157,71 @@ async function init() {
         // nuestro gran archivo histórico local actualizado automáticamente por GitHub Actions.
         const response = await fetch(ARCHIVE_URL);
         if (!response.ok) throw new Error("Error al leer el historial " + response.status);
-        
+
         const data = await response.json();
-        const allEntries = data.items || [];
-        
+        allEntries = data.items || [];
+
         const readEntries = getReadEntries();
+        const favorites = getFavorites();
+
         // Filtrar SOLO las que no habian sido leidas antes de INICIAR la sesión
         // De este modo "recordará qué he visitado para no volver a mostrarme".
         feedEntries = allEntries.filter(entry => !readEntries.includes(entry.link));
-        
+        viewMode = 'feed';
+
         loader.classList.add('hidden');
-        
-        if (feedEntries.length > 0) {
-            const startScreen = document.getElementById('start-screen');
-            const btnStart = document.getElementById('btn-start');
+
+        const startScreen = document.getElementById('start-screen');
+        const btnStart = document.getElementById('btn-start');
+        const btnFavorites = document.getElementById('btn-view-favorites');
+        const favoritesCount = document.getElementById('start-favorites-count');
+
+        if (favorites.length > 0 && btnFavorites && favoritesCount) {
+            btnFavorites.style.display = 'inline-block';
+            favoritesCount.textContent = favorites.length;
+
+            btnFavorites.addEventListener('click', () => {
+                viewMode = 'favorites';
+                feedEntries = allEntries.filter(entry => favorites.includes(entry.link));
+                startScreen.classList.remove('active');
+                if (feedEntries.length > 0) {
+                    loadEntry(0);
+                }
+            });
+        }
+
+        if (feedEntries.length > 0 || favorites.length > 0) {
             const subtitle = document.getElementById('start-subtitle');
-            
+
             // Set random phrase
             subtitle.textContent = startPhrases[Math.floor(Math.random() * startPhrases.length)];
-            
+
             const startUnreadInfo = document.getElementById('start-unread-info');
             const startUnreadCount = document.getElementById('start-unread-count');
-            if (startUnreadInfo && startUnreadCount) {
+            if (startUnreadInfo && startUnreadCount && feedEntries.length > 0) {
                 startUnreadCount.textContent = feedEntries.length;
                 startUnreadInfo.style.display = 'block';
             }
-            
+
             startScreen.classList.add('active');
-            
+
             btnStart.addEventListener('click', () => {
+                viewMode = 'feed';
                 startScreen.classList.remove('active');
-                loadEntry(0);
+                if (feedEntries.length > 0) {
+                    loadEntry(0);
+                } else {
+                    iframe.srcdoc = `
+                        <html style="background:#000000; color:#f8fafc; display:flex; justify-content:center; align-items:center; height:100vh; font-family:sans-serif;">
+                            <body>
+                                <div style="text-align:center;">
+                                    <h2 style="margin-bottom:10px;">¡Todo al día! 🎉</h2>
+                                    <p style="color:#94a3b8;">No hay entradas nuevas.</p>
+                                </div>
+                            </body>
+                        </html>`;
+                    updateUI();
+                }
             });
         } else {
             // No hay nada nuevo
@@ -177,11 +236,11 @@ async function init() {
                 </html>`;
             updateUI();
         }
-        
+
     } catch (e) {
         console.error("Error cargando RSS", e);
         loader.classList.add('hidden');
-        
+
         // Un mensaje de error elegante
         iframe.srcdoc = `
             <html style="background:#000000; color:#f8fafc; display:flex; justify-content:center; align-items:center; height:100vh; font-family:sans-serif;">
@@ -208,11 +267,16 @@ btnNext.addEventListener('click', () => {
 });
 btnUnread.addEventListener('click', toggleCurrentUnreadStatus);
 
+const btnFavorite = document.getElementById('btn-favorite');
+if (btnFavorite) {
+    btnFavorite.addEventListener('click', toggleFavorite);
+}
+
 const btnExport = document.getElementById('btn-export');
 if (btnExport) {
     btnExport.addEventListener('click', () => {
         const readEntries = getReadEntries();
-        if(readEntries.length === 0) {
+        if (readEntries.length === 0) {
             alert("No hay entradas leídas para exportar.");
             return;
         }

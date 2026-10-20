@@ -1,0 +1,1 @@
+{"name":"welele-feed-reader","version":"1.0.0","private":true,"description":"Archive recent Welele RSS posts for the static reader","dependencies":{"fast-xml-parser":"5.11.2"}}

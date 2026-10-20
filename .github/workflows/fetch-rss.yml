@@ -2,31 +2,33 @@ name: Update Welele Archive
 
 on:
   schedule:
-    # Ejecuta cada día a las 00:00, 06:00, 12:00, y 18:00 UTC
+    # Run every day at 00:00, 06:00, 12:00, and 18:00 UTC.
     - cron: '0 */6 * * *'
-  workflow_dispatch: # Permite ejecutarlo manualmente desde GitHub
+  workflow_dispatch: # Allow manual runs from GitHub.
 
 jobs:
   fetch-rss:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    
-    steps:
-      - name: Checkout repositorio
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Instalar Node.js
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
+          cache: 'npm'
 
-      - name: Ejecutar script Welele Archiver
+      - name: Install RSS parser
+        run: npm ci --omit=dev
+
+      - name: Fetch and archive Welele RSS
         run: node scripts/fetch_rss.js
 
-      - name: Guardar cambios si hay artículos nuevos
+      - name: Commit new articles
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "Auto-archivar nuevas entradas de Welele"

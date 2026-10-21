@@ -62,6 +62,31 @@ body {
     background-color: #ffffff;
 }
 
+#entry-help {
+    flex-shrink: 0;
+    padding: 8px 12px;
+    background: #111827;
+    color: var(--text-muted);
+    font-size: 12px;
+    text-align: center;
+}
+
+#entry-help[hidden] { display: none; }
+#entry-help div { margin-top: 5px; }
+#entry-help a, #retry-entry {
+    display: inline-block;
+    padding: 6px 10px;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-color);
+    font: inherit;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+#welele-frame { min-height: 0; }
+
 /* Start Screen */
 #start-screen {
     position: absolute;
@@ -327,3 +352,5 @@ body {
     color: var(--text-color);
     border-color: #475569;
 }
+
+.reader-version { font-size: 12px; color: var(--text-muted); margin: 8px 0; }

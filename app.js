@@ -4,6 +4,9 @@ const btnUnread = document.getElementById('btn-unread');
 const unreadCountSpan = document.getElementById('unread-count');
 const iframe = document.getElementById('welele-frame');
 const loader = document.getElementById('loader');
+const entryHelp = document.getElementById('entry-help');
+const openEntry = document.getElementById('open-entry');
+const retryEntry = document.getElementById('retry-entry');
 
 const startPhrases = [
     "Tu dosis diaria de humor y entretenimiento.",
@@ -12,6 +15,19 @@ const startPhrases = [
 ];
 
 const ARCHIVE_URL = 'welele_archive.json';
+// Blog identifier returned by Tumblr's official oEmbed API for Welele.
+// Keep entry.link unchanged: read history and favorites use the original URL.
+const WELELE_EMBED_BASE = 'https://embed.tumblr.com/embed/post/t:00D_viDuMUH3lfYSRGIDIA/';
+
+function getEntryFrameUrl(entry) {
+    const url = new URL(entry.link);
+    const match = url.pathname.match(/^\/post\/(\d+)(?:\/|$)/);
+    if (url.hostname !== 'welele.es' || !match) {
+        throw new Error('La entrada no tiene una URL válida de Welele.');
+    }
+    return WELELE_EMBED_BASE + match[1] + '/v2';
+}
+
 let allEntries = [];
 let feedEntries = [];
 let currentIndex = -1;
@@ -80,9 +96,12 @@ function loadEntry(index) {
     currentIndex = index;
 
     const entry = feedEntries[currentIndex];
+    openEntry.href = entry.link;
+    entryHelp.hidden = false;
     // Evitar recargar si ya es el mismo
-    if (iframe.src !== entry.link) {
-        iframe.src = entry.link;
+    const frameUrl = getEntryFrameUrl(entry);
+    if (iframe.src !== frameUrl) {
+        iframe.src = frameUrl;
     }
 
     // Marcar automáticamente como visto nada más cargar
@@ -256,6 +275,12 @@ async function init() {
 }
 
 // Event Listeners
+retryEntry.addEventListener('click', () => {
+    if (currentIndex < 0 || currentIndex >= feedEntries.length) return;
+    // Assign again to retry the same URL, without changing read/favorite state.
+    iframe.src = getEntryFrameUrl(feedEntries[currentIndex]);
+});
+
 btnPrev.addEventListener('click', () => {
     loadEntry(currentIndex - 1);
 });

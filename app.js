@@ -16,76 +16,27 @@ const startPhrases = [
 ];
 
 const ARCHIVE_URL = 'welele_archive.json';
-// Blog identifier returned by Tumblr's official oEmbed API for Welele.
-// Keep entry.link unchanged: read history and favorites use the original URL.
-const WELELE_EMBED_BASE = 'https://embed.tumblr.com/embed/post/t:00D_viDuMUH3lfYSRGIDIA/';
+// The public HTTPS relay serves the original page and its Disqus thread.
+const FULL_PAGE_RELAY_ORIGIN = 'https://welele-reader-relay-20261021-jjr.s-ynth.chatgpt.site';
 
 function getEntryFrameUrl(entry) {
     const url = new URL(entry.link);
-    const match = url.pathname.match(/^\/post\/(\d+)(?:\/|$)/);
-    if (url.hostname !== 'welele.es' || !match) {
+    if (url.hostname !== 'welele.es' || !/^\/post\/\d+(?:\/|$)/.test(url.pathname)) {
         throw new Error('La entrada no tiene una URL válida de Welele.');
     }
-    return WELELE_EMBED_BASE + match[1] + '/v2';
-}
-
-// Tumblr embeds deliberately hide their own overflow. Their official post.js
-// uses this message channel to resize the frame, so the host page can scroll.
-const TUMBLR_EMBED_ORIGIN = 'https://embed.tumblr.com';
-let embedHeight = 0;
-
-function sendEmbedMessage(method, args = [], cid) {
-    iframe.contentWindow.postMessage(JSON.stringify({
-        method: 'tumblr-post:' + method, args, ...(cid ? { cid } : {})
-    }), TUMBLR_EMBED_ORIGIN);
+    return FULL_PAGE_RELAY_ORIGIN + url.pathname + url.search;
 }
 
 function resizeEntryFrame() {
-    iframe.style.height = Math.max(readerScroll.clientHeight, embedHeight) + 'px';
+    iframe.style.height = readerScroll.clientHeight + 'px';
 }
 
 function resetEntryFrame() {
-    embedHeight = 0;
     readerScroll.scrollTop = 0;
     resizeEntryFrame();
 }
 
-function handleEmbedMessage(event) {
-    if (event.origin !== TUMBLR_EMBED_ORIGIN || event.source !== iframe.contentWindow) return;
-    let message;
-    try {
-        message = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
-    } catch {
-        return;
-    }
-    if (!message || typeof message !== 'object') return;
-    let args = message.args;
-    if (typeof args === 'string') {
-        try { args = JSON.parse(args); } catch { return; }
-    }
-    if (!Array.isArray(args)) return;
-    if (message.method === 'tumblr-post:_syn') {
-        if (message.cid) sendEmbedMessage('_method_callback_responder', [{
-            cid_response: message.cid, response: 'ack'
-        }]);
-        sendEmbedMessage('loadPostGifs');
-    } else if (message.method === 'tumblr-post:_method_callback_responder') {
-        if (args[0]?.response === 'ack') sendEmbedMessage('loadPostGifs');
-    } else if (message.method === 'tumblr-post:sizeChange') {
-        const height = args[0];
-        if (typeof height !== 'number' || !Number.isFinite(height) || height <= 0 || height > 100000) return;
-        embedHeight = Math.ceil(height);
-        resizeEntryFrame();
-    }
-}
-
-window.addEventListener('message', handleEmbedMessage);
 window.addEventListener('resize', resizeEntryFrame);
-iframe.addEventListener('load', () => {
-    if (iframe.src.startsWith(WELELE_EMBED_BASE)) {
-        sendEmbedMessage('_syn', [], 'reader');
-    }
-});
 
 let allEntries = [];
 let feedEntries = [];

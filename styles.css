@@ -58,7 +58,7 @@ body {
 #reader-scroll {
     flex: 1 1 0;
     min-height: 0;
-    overflow-y: auto;
+    overflow-y: hidden;
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
     background: #ffffff;
@@ -67,7 +67,7 @@ body {
 #welele-frame {
     display: block;
     width: 100%;
-    max-width: 542px;
+    max-width: none;
     margin: 0 auto;
     border: none;
     background-color: #ffffff;

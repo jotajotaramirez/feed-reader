@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Welele Reader</title>
-    <link rel="stylesheet" href="styles.css?v=20261021-4">
+    <link rel="stylesheet" href="styles.css?v=20261022-1">
     <link rel="icon" href="icon.png" type="image/png">
     <link rel="apple-touch-icon" href="icon.png">
 </head>
@@ -18,7 +18,7 @@
             <img src="icon.png" alt="Welele Logo" class="start-logo">
             <h1>Welele Reader</h1>
             <p id="start-subtitle"></p>
-            <p class="reader-version">Página completa · v2026.10.21.4</p>
+            <p class="reader-version">v2026.10.22.1</p>
             <div id="start-unread-info" class="start-info" style="display: none;">
                 Tienes <strong id="start-unread-count">0</strong> pendientes
             </div>
@@ -28,24 +28,29 @@
         </div>
     </div>
     
-    <aside id="entry-help" hidden aria-label="Ayuda para cargar la entrada">
-        <span>Página completa · v2026.10.21.4</span>
-        <div>
-            <a id="open-entry" target="_blank" rel="noopener noreferrer">Abrir original ↗</a>
-            <button id="retry-entry" type="button">Reintentar</button>
-        </div>
-    </aside>
     <main id="reader-scroll" aria-label="Contenido de la entrada">
         <iframe id="welele-frame" src="about:blank" title="Welele Content" allowfullscreen sandbox="allow-scripts allow-same-origin allow-popups allow-forms"></iframe>
     </main>
     
     <nav id="bottom-bar">
+        <button id="menu-backdrop" hidden tabindex="-1" aria-label="Cerrar opciones"></button>
+        <div id="reader-menu" hidden role="dialog" aria-label="Opciones del lector">
+            <button id="btn-favorite" type="button" aria-pressed="false" disabled>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                <span id="favorite-label">Añadir a favoritos</span>
+            </button>
+            <a id="open-entry" target="_blank" rel="noopener noreferrer">Abrir original ↗</a>
+            <button id="retry-entry" type="button" disabled>Reintentar carga</button>
+            <button id="menu-view-favorites" type="button" disabled>Ver mis favoritos</button>
+            <button id="menu-home" type="button">Volver al inicio</button>
+            <p class="reader-version">v2026.10.22.1</p>
+        </div>
         <div class="left-actions">
+            <button id="btn-menu" class="action-btn icon-only" type="button" title="Opciones" aria-label="Opciones" aria-expanded="false" aria-controls="reader-menu" aria-haspopup="dialog">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
+            </button>
             <button id="btn-unread" class="action-btn icon-only" title="Marcar como no visto">
                 <svg id="unread-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-            </button>
-            <button id="btn-favorite" class="action-btn icon-only" title="Añadir a favoritos">
-                <svg id="favorite-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
             </button>
         </div>
         <div class="nav-buttons-group">
@@ -61,6 +66,6 @@
             <span class="small-text">pendientes</span>
         </div>
     </nav>
-    <script src="app.js?v=20261021-4"></script>
+    <script src="app.js?v=20261022-1"></script>
 </body>
 </html>

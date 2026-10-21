@@ -55,9 +55,20 @@ body {
 
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
+#reader-scroll {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    background: #ffffff;
+}
+
 #welele-frame {
-    flex-grow: 1;
+    display: block;
     width: 100%;
+    max-width: 542px;
+    margin: 0 auto;
     border: none;
     background-color: #ffffff;
 }
@@ -202,6 +213,7 @@ body {
 
 /* Bottom Bar */
 #bottom-bar {
+    flex-shrink: 0;
     height: var(--bar-height);
     background-color: var(--bar-bg);
     backdrop-filter: blur(12px);

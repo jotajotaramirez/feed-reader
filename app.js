@@ -7,6 +7,7 @@ const loader = document.getElementById('loader');
 const entryHelp = document.getElementById('entry-help');
 const openEntry = document.getElementById('open-entry');
 const retryEntry = document.getElementById('retry-entry');
+const readerScroll = document.getElementById('reader-scroll');
 
 const startPhrases = [
     "Tu dosis diaria de humor y entretenimiento.",
@@ -27,6 +28,64 @@ function getEntryFrameUrl(entry) {
     }
     return WELELE_EMBED_BASE + match[1] + '/v2';
 }
+
+// Tumblr embeds deliberately hide their own overflow. Their official post.js
+// uses this message channel to resize the frame, so the host page can scroll.
+const TUMBLR_EMBED_ORIGIN = 'https://embed.tumblr.com';
+let embedHeight = 0;
+
+function sendEmbedMessage(method, args = [], cid) {
+    iframe.contentWindow.postMessage(JSON.stringify({
+        method: 'tumblr-post:' + method, args, ...(cid ? { cid } : {})
+    }), TUMBLR_EMBED_ORIGIN);
+}
+
+function resizeEntryFrame() {
+    iframe.style.height = Math.max(readerScroll.clientHeight, embedHeight) + 'px';
+}
+
+function resetEntryFrame() {
+    embedHeight = 0;
+    readerScroll.scrollTop = 0;
+    resizeEntryFrame();
+}
+
+function handleEmbedMessage(event) {
+    if (event.origin !== TUMBLR_EMBED_ORIGIN || event.source !== iframe.contentWindow) return;
+    let message;
+    try {
+        message = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+    } catch {
+        return;
+    }
+    if (!message || typeof message !== 'object') return;
+    let args = message.args;
+    if (typeof args === 'string') {
+        try { args = JSON.parse(args); } catch { return; }
+    }
+    if (!Array.isArray(args)) return;
+    if (message.method === 'tumblr-post:_syn') {
+        if (message.cid) sendEmbedMessage('_method_callback_responder', [{
+            cid_response: message.cid, response: 'ack'
+        }]);
+        sendEmbedMessage('loadPostGifs');
+    } else if (message.method === 'tumblr-post:_method_callback_responder') {
+        if (args[0]?.response === 'ack') sendEmbedMessage('loadPostGifs');
+    } else if (message.method === 'tumblr-post:sizeChange') {
+        const height = args[0];
+        if (typeof height !== 'number' || !Number.isFinite(height) || height <= 0 || height > 100000) return;
+        embedHeight = Math.ceil(height);
+        resizeEntryFrame();
+    }
+}
+
+window.addEventListener('message', handleEmbedMessage);
+window.addEventListener('resize', resizeEntryFrame);
+iframe.addEventListener('load', () => {
+    if (iframe.src.startsWith(WELELE_EMBED_BASE)) {
+        sendEmbedMessage('_syn', [], 'reader');
+    }
+});
 
 let allEntries = [];
 let feedEntries = [];
@@ -101,6 +160,7 @@ function loadEntry(index) {
     // Evitar recargar si ya es el mismo
     const frameUrl = getEntryFrameUrl(entry);
     if (iframe.src !== frameUrl) {
+        resetEntryFrame();
         iframe.src = frameUrl;
     }
 
@@ -278,6 +338,7 @@ async function init() {
 retryEntry.addEventListener('click', () => {
     if (currentIndex < 0 || currentIndex >= feedEntries.length) return;
     // Assign again to retry the same URL, without changing read/favorite state.
+    resetEntryFrame();
     iframe.src = getEntryFrameUrl(feedEntries[currentIndex]);
 });
 

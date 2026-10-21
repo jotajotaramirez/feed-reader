@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prueba de la página original · Welele Reader</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;height:100%;font:14px system-ui,sans-serif}
+body{height:100dvh;display:flex;flex-direction:column;background:#111827;color:#f8fafc}
+header{flex:none;padding:10px 12px}h1{font-size:15px;margin:0 0 5px}p{font-size:12px;margin:5px 0;color:#cbd5e1}
+nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}a,button{font:inherit;color:#f8fafc;background:#1f2937;border:1px solid #475569;border-radius:7px;padding:7px 9px;text-decoration:none;cursor:pointer}
+button:disabled{opacity:.4;cursor:default}
+iframe{display:block;flex:1;min-height:0;width:100%;border:0;background:white}
+#post-title{overflow-wrap:anywhere}
+</style>
+</head>
+<body>
+<header>
+<h1>Página original · Prueba sin vista simplificada</h1>
+<p>Este enlace carga únicamente Welele. No cambia a Tumblr ni modifica tus leídos o favoritos.</p>
+<p id="post-title" role="status">Preparando la entrada…</p>
+<nav>
+<a id="open-original" target="_blank" rel="noopener noreferrer" hidden>Abrir fuera del marco ↗</a>
+<button id="retry" disabled>Reintentar</button>
+<button id="next" disabled>Otra entrada</button>
+<a href="index.html">Volver al lector</a>
+</nav>
+</header>
+<iframe id="original-frame" src="about:blank" title="Página original de Welele con comentarios" allowfullscreen sandbox="allow-scripts allow-same-origin allow-popups allow-forms"></iframe>
+<script>
+const frame = document.getElementById('original-frame');
+const title = document.getElementById('post-title');
+const original = document.getElementById('open-original');
+const retry = document.getElementById('retry');
+const next = document.getElementById('next');
+let entries = [];
+let index = -1;
+function showEntry(position) {
+    if (position < 0 || position >= entries.length) return;
+    index = position;
+    const entry = entries[index];
+    original.href = entry.link;
+    original.hidden = false;
+    title.textContent = 'Solo página completa: ' + entry.link;
+    frame.src = entry.link;
+    retry.disabled = false;
+    next.disabled = index >= entries.length - 1;
+}
+retry.addEventListener('click', () => showEntry(index));
+next.addEventListener('click', () => showEntry(index + 1));
+(async () => {
+    try {
+        const response = await fetch('welele_archive.json', {cache:'no-store'});
+        if (!response.ok) throw new Error('No se ha podido leer el archivo de entradas.');
+        const archive = await response.json();
+        const valid = (archive.items || []).filter(entry => {
+            try {
+                const url = new URL(entry.link);
+                return url.protocol === 'https:' && url.hostname === 'welele.es' && /^\/post\/\d+(?:\/|$)/.test(url.pathname);
+            } catch { return false; }
+        });
+        let read = [];
+        try {
+            const stored = JSON.parse(localStorage.getItem('welele_read') || '[]');
+            if (Array.isArray(stored)) read = stored;
+        } catch {}
+        entries = valid.filter(entry => !read.includes(entry.link));
+        if (!entries.length) entries = valid;
+        const post = new URLSearchParams(location.search).get('post');
+        if (post && /^\d+$/.test(post)) {
+            const requested = valid.find(entry => new URL(entry.link).pathname.split('/')[2] === post);
+            if (requested) entries = [requested, ...entries.filter(entry => entry.link !== requested.link)];
+        }
+        if (entries.length) showEntry(0);
+        else title.textContent = 'No hay entradas disponibles para la prueba.';
+    } catch (error) {
+        title.textContent = error.message;
+    }
+})();
+</script>
+</body>
+</html>

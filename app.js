@@ -14,6 +14,10 @@ const openEntry = document.getElementById('open-entry');
 const retryEntry = document.getElementById('retry-entry');
 const readerScroll = document.getElementById('reader-scroll');
 const navigationStatus = document.getElementById('navigation-status');
+const shareVideoButton = document.getElementById('menu-share-video');
+const shareVideoPicker = document.getElementById('share-video-picker');
+const shareVideoSelect = document.getElementById('share-video-select');
+const shareVideoStatus = document.getElementById('share-video-status');
 
 const startPhrases = [
     "Tu dosis diaria de humor y entretenimiento.",
@@ -49,6 +53,12 @@ let feedEntries = [];
 let currentIndex = -1;
 let viewMode = 'feed';
 let frameLoading = false;
+let videoSources = [];
+let preparedVideo = null;
+let videoController = null;
+let videoSharing = false;
+let videoGeneration = 0;
+const MAX_VIDEO_BYTES = 100 * 1024 * 1024;
 const SESSION_KEY = 'welele_session';
 
 function saveReadingSession() {
@@ -101,6 +111,7 @@ function setMenuOpen(open, restoreFocus = false) {
 }
 
 function showStartScreen() {
+    resetVideoSharing();
     frameLoading = false;
     setNavigationLoading(null);
     setMenuOpen(false);
@@ -191,6 +202,157 @@ function toggleCurrentUnreadStatus() {
     setReadEntries(readEntries);
 }
 
+function setShareVideoStatus(message) {
+    shareVideoStatus.textContent = message;
+    shareVideoStatus.hidden = !message;
+}
+
+function supportsVideoSharing() {
+    return typeof navigator !== 'undefined' &&
+        typeof navigator.share === 'function' && typeof navigator.canShare === 'function';
+}
+
+function updateVideoShareUI() {
+    shareVideoButton.disabled = !feedEntries[currentIndex] || !videoSources.length ||
+        videoSharing || !supportsVideoSharing();
+    shareVideoSelect.disabled = videoSharing;
+    shareVideoPicker.hidden = videoSources.length < 2;
+    if (videoSharing) shareVideoButton.setAttribute('aria-busy', 'true');
+    else shareVideoButton.removeAttribute('aria-busy');
+}
+
+function resetVideoSharing() {
+    videoGeneration++;
+    if (videoController) videoController.abort();
+    videoController = null;
+    videoSharing = false;
+    videoSources = [];
+    preparedVideo = null;
+    shareVideoSelect.innerHTML = '';
+    setShareVideoStatus('');
+    updateVideoShareUI();
+}
+
+function currentPostId() {
+    const entry = feedEntries[currentIndex];
+    if (!entry) return '';
+    try { return new URL(entry.link).pathname.match(/^\/post\/(\d+)/)?.[1] || ''; }
+    catch (error) { return ''; }
+}
+
+function supportedVideoSource(source) {
+    if (!source || typeof source.url !== 'string') return null;
+    try {
+        const url = new URL(source.url);
+        const host = url.hostname === 'media.tumblr.com' || url.hostname.endsWith('.media.tumblr.com');
+        if (url.protocol !== 'https:' || url.username || url.password || url.port || !host ||
+            !/\.(?:mp4|mov|m4v|webm|ogv)$/i.test(url.pathname) || url.href.length > 4096) return null;
+        const type = typeof source.type === 'string' ? source.type.split(';')[0].trim().toLowerCase() : '';
+        return { url: url.href, type: /^video\/(?:mp4|quicktime|webm|ogg|x-m4v)$/.test(type) ? type : '' };
+    } catch (error) {
+        return null;
+    }
+}
+
+window.addEventListener('message', event => {
+    if (event.origin !== FULL_PAGE_RELAY_ORIGIN || event.source !== iframe.contentWindow ||
+        !event.data || event.data.type !== 'welele-video-sources') return;
+    if (event.data.postId !== currentPostId()) {
+        resetVideoSharing();
+        return;
+    }
+    const candidates = Array.isArray(event.data.videos) ? event.data.videos.slice(0, 10) : [];
+    const seen = new Set();
+    const videos = candidates.map(supportedVideoSource).filter(video => {
+        if (!video || seen.has(video.url)) return false;
+        seen.add(video.url);
+        return true;
+    });
+    if (JSON.stringify(videos) !== JSON.stringify(videoSources)) {
+        resetVideoSharing();
+        videoSources = videos;
+        shareVideoSelect.innerHTML = videos.map((video, index) =>
+            `<option value="${index}">Vídeo ${index + 1}</option>`).join('');
+    }
+    if (!videoSources.length && event.data.hasVideo) {
+        setShareVideoStatus('Este vídeo no se puede compartir directamente desde el lector.');
+    } else if (videoSources.length && !supportsVideoSharing()) {
+        setShareVideoStatus('Este navegador no permite compartir archivos directamente.');
+    } else if (!videoSharing && !preparedVideo) {
+        setShareVideoStatus('');
+    }
+    updateVideoShareUI();
+});
+
+function videoFileType(video, blob) {
+    const headerType = (blob.type || '').split(';')[0].trim().toLowerCase();
+    const type = video.type || (/^video\/(?:mp4|quicktime|webm|ogg|x-m4v)$/.test(headerType) ? headerType : '');
+    if (type === 'video/mp4') return { type, extension: 'mp4' };
+    if (type === 'video/quicktime') return { type, extension: 'mov' };
+    if (type === 'video/webm') return { type, extension: 'webm' };
+    if (type === 'video/ogg') return { type, extension: 'ogv' };
+    if (type === 'video/x-m4v') return { type, extension: 'm4v' };
+    const extension = new URL(video.url).pathname.split('.').pop().toLowerCase();
+    const types = { mp4:'video/mp4', mov:'video/quicktime', m4v:'video/x-m4v', webm:'video/webm', ogv:'video/ogg' };
+    return { type:types[extension], extension };
+}
+
+async function shareCurrentVideo() {
+    if (videoSharing || !supportsVideoSharing()) return;
+    const index = Number(shareVideoSelect.value) || 0;
+    const video = videoSources[index];
+    if (!video) return;
+    const generation = videoGeneration;
+    const alreadyPrepared = preparedVideo?.url === video.url;
+    videoSharing = true;
+    updateVideoShareUI();
+    try {
+        if (!alreadyPrepared) {
+            setShareVideoStatus('Preparando vídeo para compartir…');
+            videoController = new AbortController();
+            const endpoint = FULL_PAGE_RELAY_ORIGIN + '/share-video?url=' + encodeURIComponent(video.url);
+            const response = await fetch(endpoint, { signal:videoController.signal, credentials:'omit' });
+            if (response.status === 413) throw new Error('VIDEO_TOO_LARGE');
+            if (!response.ok) throw new Error('VIDEO_FETCH_FAILED');
+            const blob = await response.blob();
+            if (!blob.size) throw new Error('VIDEO_FETCH_FAILED');
+            if (blob.size > MAX_VIDEO_BYTES) throw new Error('VIDEO_TOO_LARGE');
+            if (generation !== videoGeneration) return;
+            const format = videoFileType(video, blob);
+            const name = `welele-${currentPostId()}-${index + 1}.${format.extension}`;
+            preparedVideo = { url:video.url, file:new File([blob], name, {type:format.type}) };
+        }
+        if (!navigator.canShare({ files:[preparedVideo.file] })) {
+            setShareVideoStatus('Este navegador no permite compartir este vídeo como archivo.');
+            return;
+        }
+        if (navigator.userActivation && !navigator.userActivation.isActive) {
+            setShareVideoStatus('Vídeo preparado. Pulsa de nuevo «Compartir vídeo».');
+            return;
+        }
+        await navigator.share({ files:[preparedVideo.file] });
+        if (generation !== videoGeneration) return;
+        setShareVideoStatus('');
+        setMenuOpen(false, true);
+    } catch (error) {
+        if (generation !== videoGeneration) return;
+        if (error.name === 'AbortError') setShareVideoStatus('');
+        else if (error.name === 'NotAllowedError' && !alreadyPrepared) {
+            setShareVideoStatus('Vídeo preparado. Pulsa de nuevo «Compartir vídeo».');
+        } else if (error.message === 'VIDEO_TOO_LARGE') {
+            setShareVideoStatus('Este vídeo supera los 100 MB y no se puede compartir desde el lector.');
+        } else {
+            setShareVideoStatus('No se pudo compartir el vídeo. Vuelve a intentarlo.');
+        }
+    } finally {
+        if (generation === videoGeneration) {
+            videoController = null;
+            videoSharing = false;
+            updateVideoShareUI();
+        }
+    }
+}
+
 function setNavigationLoading(button) {
     for (const [candidate, label] of [[btnPrev, 'Anterior'], [btnNext, 'Siguiente']]) {
         const loading = candidate === button;
@@ -229,6 +391,7 @@ function loadEntry(index, { markRead = true, navigationButton = null } = {}) {
     // Evitar recargar si ya es el mismo
     const frameUrl = getEntryFrameUrl(entry);
     if (iframe.src !== frameUrl) {
+        resetVideoSharing();
         resetEntryFrame();
         frameLoading = true;
         setNavigationLoading(navigationButton);
@@ -244,6 +407,7 @@ function loadEntry(index, { markRead = true, navigationButton = null } = {}) {
 }
 
 function updateUI() {
+    updateVideoShareUI();
     const hasCurrent = Boolean(feedEntries[currentIndex]);
     btnFavorite.disabled = !hasCurrent;
     retryEntry.disabled = !hasCurrent;
@@ -326,6 +490,7 @@ async function init() {
 }
 
 function showEmptyFeed() {
+    resetVideoSharing();
     frameLoading = false;
     setNavigationLoading(null);
     resizeEntryFrame();
@@ -368,6 +533,7 @@ document.getElementById('btn-start').addEventListener('click', () => {
 retryEntry.addEventListener('click', () => {
     if (currentIndex < 0 || currentIndex >= feedEntries.length) return;
     setMenuOpen(false, true);
+    resetVideoSharing();
     // Assign again to retry the same URL, without changing read/favorite state.
     resetEntryFrame();
     frameLoading = true;
@@ -381,6 +547,11 @@ btnNext.addEventListener('click', () => {
     loadEntry(currentIndex + 1, { navigationButton: btnNext });
 });
 btnUnread.addEventListener('click', toggleCurrentUnreadStatus);
+shareVideoButton.addEventListener('click', shareCurrentVideo);
+shareVideoSelect.addEventListener('change', () => {
+    preparedVideo = null;
+    setShareVideoStatus('');
+});
 
 if (btnFavorite) {
     btnFavorite.addEventListener('click', () => {

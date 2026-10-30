@@ -13,6 +13,7 @@ const menuFavorites = document.getElementById('menu-view-favorites');
 const openEntry = document.getElementById('open-entry');
 const retryEntry = document.getElementById('retry-entry');
 const readerScroll = document.getElementById('reader-scroll');
+const navigationStatus = document.getElementById('navigation-status');
 
 const startPhrases = [
     "Tu dosis diaria de humor y entretenimiento.",
@@ -47,6 +48,7 @@ let allEntries = [];
 let feedEntries = [];
 let currentIndex = -1;
 let viewMode = 'feed';
+let frameLoading = false;
 const SESSION_KEY = 'welele_session';
 
 function saveReadingSession() {
@@ -99,6 +101,8 @@ function setMenuOpen(open, restoreFocus = false) {
 }
 
 function showStartScreen() {
+    frameLoading = false;
+    setNavigationLoading(null);
     setMenuOpen(false);
     localStorage.removeItem(SESSION_KEY);
     iframe.removeAttribute('srcdoc');
@@ -187,7 +191,34 @@ function toggleCurrentUnreadStatus() {
     setReadEntries(readEntries);
 }
 
-function loadEntry(index, { markRead = true } = {}) {
+function setNavigationLoading(button) {
+    for (const [candidate, label] of [[btnPrev, 'Anterior'], [btnNext, 'Siguiente']]) {
+        const loading = candidate === button;
+        candidate.classList[loading ? 'add' : 'remove']('is-loading');
+        candidate.title = loading ? `Cargando entrada ${label.toLowerCase()}` : label;
+        candidate.setAttribute('aria-label', candidate.title);
+        if (loading) candidate.setAttribute('aria-busy', 'true');
+        else candidate.removeAttribute('aria-busy');
+    }
+    navigationStatus.textContent = button ? button.title : '';
+}
+
+function settleEntryFrame() {
+    if (!frameLoading) return;
+    // Ignore a late initial about:blank load after a real navigation has started.
+    try {
+        if (iframe.contentDocument?.URL === 'about:blank' && iframe.src !== 'about:blank') return;
+    } catch (error) {
+        // Cross-origin documents cannot be inspected; their load event still settles navigation.
+    }
+    frameLoading = false;
+    setNavigationLoading(null);
+}
+
+iframe.addEventListener('load', settleEntryFrame);
+iframe.addEventListener('error', settleEntryFrame);
+
+function loadEntry(index, { markRead = true, navigationButton = null } = {}) {
     if (index < 0 || index >= feedEntries.length) return;
     currentIndex = index;
 
@@ -199,7 +230,11 @@ function loadEntry(index, { markRead = true } = {}) {
     const frameUrl = getEntryFrameUrl(entry);
     if (iframe.src !== frameUrl) {
         resetEntryFrame();
+        frameLoading = true;
+        setNavigationLoading(navigationButton);
         iframe.src = frameUrl;
+    } else {
+        setNavigationLoading(frameLoading ? navigationButton : null);
     }
 
     // Marcar automáticamente como visto nada más cargar
@@ -291,6 +326,8 @@ async function init() {
 }
 
 function showEmptyFeed() {
+    frameLoading = false;
+    setNavigationLoading(null);
     resizeEntryFrame();
     iframe.srcdoc = '<html lang="es" style="background:#000;color:#f8fafc;font-family:sans-serif;text-align:center;padding-top:25vh"><h2>¡Todo al día! 🎉</h2><p>No hay entradas nuevas.</p></html>';
     updateUI();
@@ -333,14 +370,15 @@ retryEntry.addEventListener('click', () => {
     setMenuOpen(false, true);
     // Assign again to retry the same URL, without changing read/favorite state.
     resetEntryFrame();
+    frameLoading = true;
     iframe.src = getEntryFrameUrl(feedEntries[currentIndex]);
 });
 
 btnPrev.addEventListener('click', () => {
-    loadEntry(currentIndex - 1);
+    loadEntry(currentIndex - 1, { navigationButton: btnPrev });
 });
 btnNext.addEventListener('click', () => {
-    loadEntry(currentIndex + 1);
+    loadEntry(currentIndex + 1, { navigationButton: btnNext });
 });
 btnUnread.addEventListener('click', toggleCurrentUnreadStatus);
 

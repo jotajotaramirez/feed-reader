@@ -28,7 +28,9 @@ async function open(storage = new Map(), archive = entries) {
     vm.runInContext(source, context);
     await new Promise(resolve => setImmediate(resolve));
     return { run: script => vm.runInContext(script, context), element, storage,
-        click: id => element(id).events.click(), current: () => element('open-entry').href };
+        click: id => element(id).events.click(),
+        emit: (id, event) => element(id).events[event](),
+        current: () => element('open-entry').href };
 }
 test('reload resumes a read entry and keeps previous/next navigation', async () => {
     const first = await open(); first.click('btn-start'); first.click('btn-next');
@@ -75,4 +77,74 @@ test('home clears the resume pointer and starts from remaining unread entries', 
     const page = await open(); page.click('btn-start'); page.click('menu-home');
     assert.equal(page.storage.has('welele_session'), false);
     page.click('btn-start'); assert.equal(page.current(), url(3));
+});
+
+test('the pressed arrow shows loading until the frame finishes', async () => {
+    const page = await open();
+    page.click('btn-start');
+    page.emit('welele-frame', 'load');
+    page.click('btn-next');
+
+    assert.equal(page.current(), url(3));
+    assert.equal(page.element('btn-next').classList.contains('is-loading'), true);
+    assert.equal(page.element('btn-prev').classList.contains('is-loading'), false);
+    assert.equal(page.element('btn-next')['aria-busy'], 'true');
+    assert.equal(page.element('navigation-status').textContent, 'Cargando entrada siguiente');
+
+    page.emit('welele-frame', 'load');
+    assert.equal(page.element('btn-next').classList.contains('is-loading'), false);
+    assert.equal(page.element('btn-next')['aria-busy'], undefined);
+    assert.equal(page.element('btn-next')['aria-label'], 'Siguiente');
+    assert.equal(page.element('navigation-status').textContent, '');
+
+    page.click('btn-prev');
+    assert.equal(page.element('btn-prev').classList.contains('is-loading'), true);
+    assert.equal(page.element('btn-prev').disabled, true);
+    assert.equal(page.element('navigation-status').textContent, 'Cargando entrada anterior');
+    page.emit('welele-frame', 'error');
+    assert.equal(page.element('btn-prev').classList.contains('is-loading'), false);
+    assert.equal(page.element('btn-prev')['aria-label'], 'Anterior');
+});
+
+test('rapid navigation follows the most recently pressed arrow and keeps navigation working', async () => {
+    const page = await open();
+    page.click('btn-start');
+    page.emit('welele-frame', 'load');
+    page.click('btn-next');
+    page.click('btn-next');
+    page.click('btn-prev');
+
+    assert.equal(page.current(), url(3));
+    assert.equal(page.element('btn-prev').classList.contains('is-loading'), true);
+    assert.equal(page.element('btn-next').classList.contains('is-loading'), false);
+    page.emit('welele-frame', 'load');
+    assert.equal(page.element('btn-prev').classList.contains('is-loading'), false);
+});
+
+test('home cancels the indicator and retry preserves it until the frame finishes', async () => {
+    const page = await open();
+    page.click('btn-start');
+    page.emit('welele-frame', 'load');
+    page.click('btn-next');
+    page.click('retry-entry');
+    assert.equal(page.element('btn-next').classList.contains('is-loading'), true);
+    page.emit('welele-frame', 'load');
+    assert.equal(page.element('btn-next').classList.contains('is-loading'), false);
+
+    page.click('btn-next');
+    page.click('menu-home');
+    assert.equal(page.element('btn-next').classList.contains('is-loading'), false);
+    assert.equal(page.element('navigation-status').textContent, '');
+});
+
+test('a late initial blank-frame load does not stop the navigation indicator', async () => {
+    const page = await open();
+    page.click('btn-start');
+    page.click('btn-next');
+    page.element('welele-frame').contentDocument = { URL: 'about:blank' };
+    page.emit('welele-frame', 'load');
+    assert.equal(page.element('btn-next').classList.contains('is-loading'), true);
+    page.element('welele-frame').contentDocument = null;
+    page.emit('welele-frame', 'load');
+    assert.equal(page.element('btn-next').classList.contains('is-loading'), false);
 });
